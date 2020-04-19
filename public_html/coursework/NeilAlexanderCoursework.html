@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+
+<html>
+
+    <head>
+        <title>Coursework - Neil Alexander</title>
+        <link rel="shortcut icon" href="../favicon.ico">
+        <script type="text/javascript" src="../libs/three.js"></script>
+        <script type="text/javascript" src="../libs/jquery.js"></script>
+        <script type="text/javascript" src="../libs/stats.js"></script>
+        <script type="text/javascript" src="../libs/dat.gui.js"></script>       
+        <script type="text/javascript" src="../libs/keypress.js"></script>
+        <style>
+            body{
+                /* set margin to 0 and overflow to hidden, to go fullscreen */
+                margin: 0;
+                overflow: hidden;
+            }
+        </style>
+    </head>
+    <body>
+
+        <div id="Stats-output">
+        </div>
+        <!-- Div which will hold the Output -->
+        <div id="WebGL-output">
+        </div>
+
+        <!-- Javascript code that runs our Three.js examples -->
+        <script type="text/javascript">
+
+            // once everything is loaded, we run our Three.js stuff.
+            $(function () {
+
+                var stats = initStats();
+
+                // create a scene, that will hold all our elements such as objects, cameras and lights.
+                var scene = new THREE.Scene();
+
+                // create a camera, which defines where we're looking at.
+                var camera = new THREE.PerspectiveCamera(100, window.innerWidth / window.innerHeight, 1, 1000);
+
+                // position and point the camera to the center of the scene
+                camera.position.x = 0;
+                camera.position.y = -1;
+                camera.position.z = 30;
+                camera.lookAt(scene.position);
+
+                // create overheadCamera group
+                var overheadCameraGroup = new THREE.Object3D();
+                scene.add(overheadCameraGroup);
+
+                overheadCameraGroup.position.x = 0;
+                overheadCameraGroup.position.y = 30;
+                overheadCameraGroup.position.z = 30;
+
+                // create firstPersonCamera group
+                var firstPersonCameraGroup = new THREE.Object3D();
+                scene.add(firstPersonCameraGroup);
+
+                firstPersonCameraGroup.position.x = 0;
+                firstPersonCameraGroup.position.y = 5;
+                firstPersonCameraGroup.position.z = 20;
+
+                // create an orbit group and add the camera
+                var orbitGroup = new THREE.Object3D();
+                scene.add(orbitGroup);
+                orbitGroup.add(camera);
+                orbitGroup.position.y = 10;
+
+                // create a render and set the size
+                var renderer = new THREE.WebGLRenderer();
+
+                renderer.setClearColor(0xEEEEEE, 1.0);
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.shadowMap.enabled = true;
+
+                // create the ground plane
+                var planeGeometry = new THREE.PlaneGeometry(80, 80);
+                var planeMaterial = new THREE.MeshLambertMaterial({color: 0x59FF00});
+                var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+                plane.receiveShadow = true;
+
+                // rotate and position the plane
+                plane.rotation.x = -0.5 * Math.PI;
+
+                // add the plane to the scene
+                scene.add(plane);
+
+                // add wire frame material type
+                var wireFrameMaterial = new THREE.MeshBasicMaterial();
+                wireFrameMaterial.wireframe = false;
+
+                // set turbine height
+                var turbineHeight = 15;
+
+                // create a turbine group to contain the entire wind turbine
+                var turbineGroup = new THREE.Object3D();
+                turbineGroup.position.z = 15;
+                turbineGroup.position.x = -25;
+                scene.add(turbineGroup);
+
+                // create a group to contain the turbine body and add it to the turbineGroup
+                var bodyGroup = new THREE.Object3D();
+                turbineGroup.add(bodyGroup);
+
+                // create a group to contain the rotor blades and add it to the turbineGroup group
+                var rotorGroup = new THREE.Object3D();
+                rotorGroup.position.y = turbineHeight + 1;
+                turbineGroup.add(rotorGroup);
+
+                // create turbine material and rotor geometry
+                var turbineMaterial = new THREE.MeshLambertMaterial({color: 0xA0A0A0});
+                var rotorGeometry = new THREE.CubeGeometry(5, 0.5, 0.5);
+
+                // create a rotor blade
+                var rotor1 = new THREE.Mesh(rotorGeometry, turbineMaterial);
+                rotor1.castShadow = true;
+
+                // add the rotor blade to the rotor group
+                rotorGroup.add(rotor1);
+
+                // create another rotor blade at right angles to the first
+                var rotor2 = new THREE.Mesh(rotorGeometry, turbineMaterial);
+                rotor2.rotation.y = 0.5 * Math.PI;
+                rotor2.castShadow = true;
+
+                // add the rotor blade to the rotor group
+                rotorGroup.add(rotor2);
+                rotorGroup.position.z = 0.3;
+                rotorGroup.rotation.x = 0.5 * Math.PI;
+
+                // create a sphere (radius 1) to use as a turbine
+                var turbineGeometry = new THREE.SphereGeometry(1);
+                var turbine = new THREE.Mesh(turbineGeometry, turbineMaterial);
+                turbine.castShadow = true;
+
+                // extend sphere dimensions to represent wind turbine elevation
+                turbine.scale.x = 0.3;
+                turbine.scale.y = 10;
+                turbine.scale.z = 0.3;
+
+                turbine.position.y = 7;
+
+                // add the turbine to the body group
+                bodyGroup.add(turbine);
+
+                // create building group
+                var buildingGroup = new THREE.Object3D();
+                scene.add(buildingGroup);
+
+                // position the building group
+                buildingGroup.position.x = 0;
+                buildingGroup.position.y = 5;
+                buildingGroup.position.z = 5;
+
+                // load in textures and maps
+                var loader = new THREE.TextureLoader();
+
+                var roofTexture = loader.load("../assets/textures/general/ceramicRoof.jpg");
+
+                var smallStoneTexture = loader.load("../assets/textures/general/stone-medium.jpg");
+                var smallStoneBumpMap = loader.load("../assets/textures/general/stone-bump-medium.jpg");
+
+                var mediumStoneTexture = loader.load("../assets/textures/general/stone-medium.jpg");
+                var mediumStoneBumpMap = loader.load("../assets/textures/general/stone-bump-medium.jpg");
+
+                var largeStoneTexture = loader.load("../assets/textures/general/stone-large.jpg");
+                var largeStoneBumpMap = loader.load("../assets/textures/general/stone-bump-large.jpg");
+
+                // set each texture to a material
+                var roofMaterial = new THREE.MeshPhongMaterial();
+                roofMaterial.map = roofTexture;
+
+                var smallStoneMaterial = new THREE.MeshPhongMaterial();
+                smallStoneMaterial.map = smallStoneTexture;
+                smallStoneMaterial.bumpMap = smallStoneBumpMap;
+                smallStoneMaterial.bumpScale = 0.1;
+
+                var mediumStoneMaterial = new THREE.MeshPhongMaterial();
+                mediumStoneMaterial.map = mediumStoneTexture;
+                mediumStoneMaterial.bumpMap = mediumStoneBumpMap;
+                mediumStoneMaterial.bumpScale = 0.1;
+
+                var largeStoneMaterial = new THREE.MeshPhongMaterial();
+                largeStoneMaterial.map = largeStoneTexture;
+                largeStoneMaterial.bumpMap = largeStoneBumpMap;
+                largeStoneMaterial.bumpScale = 0.1;
+
+                // create ground/first floor back exterior wall
+                var buildingBackGeometry = new THREE.CubeGeometry(24.9, 18.5, 1);
+                var buildingBack = new THREE.Mesh(buildingBackGeometry, largeStoneMaterial);
+
+                // first time using largeStoneMaterial - apply repeating so the texture + bump map fits objects
+                buildingBack.material.map.repeat.set(4, 4);
+
+                buildingBack.material.map.wrapS = THREE.RepeatWrapping;
+                buildingBack.material.map.wrapT = THREE.RepeatWrapping;
+
+                buildingBack.material.bumpMap.repeat.set(4, 4);
+
+                buildingBack.material.bumpMap.wrapS = THREE.RepeatWrapping;
+                buildingBack.material.bumpMap.wrapT = THREE.RepeatWrapping;
+
+                buildingBack.castShadow = true;
+
+                // add the buildingBack to the scene
+                scene.add(buildingBack);
+
+                // add the buildingBack to the buildingGroup
+                buildingGroup.add(buildingBack);
+
+                buildingBack.position.z = -20;
+                buildingBack.position.y = 4;
+
+                // create inside wall material
+                var insideWallMaterial = new THREE.MeshLambertMaterial({color: 0xFFFFFF});
+
+                // add the inside back wall for ground/first floors
+                var buildingBackWallGeometry = new THREE.CubeGeometry(23, 18.5, 0.1);
+                var buildingBackInsideWall = new THREE.Mesh(buildingBackWallGeometry, insideWallMaterial);
+                buildingBackInsideWall.castShadow = true;
+
+                // add the buildingBackWall to the scene
+                scene.add(buildingBackInsideWall);
+
+                // add the buildingBackWall to the buildingGroup
+                buildingGroup.add(buildingBackInsideWall);
+
+                buildingBackInsideWall.position.z = -19.5;
+                buildingBackInsideWall.position.y = 4;
+
+                // add exterior right wall for ground/first floors
+                var buildingRightGeometry = new THREE.CubeGeometry(1, 18.5, 25);
+                var buildingRight = new THREE.Mesh(buildingRightGeometry, largeStoneMaterial);
+                buildingRight.castShadow = true;
+
+                // add the buildingRight to the scene
+                scene.add(buildingRight);
+
+                // add the buildingRight to the buildingGroup
+                buildingGroup.add(buildingRight);
+
+                buildingRight.position.x = 12;
+                buildingRight.position.y = 4;
+                buildingRight.position.z = -7.5;
+
+                // add the ground/first floor right hand side inside wall
+                var buildingRightWallGeometry = new THREE.CubeGeometry(0.1, 18.5, 24);
+                var buildingInsideRightWall = new THREE.Mesh(buildingRightWallGeometry, insideWallMaterial);
+                buildingInsideRightWall.castShadow = true;
+
+                // add the buildingInsideRightWall to the scene
+                scene.add(buildingInsideRightWall);
+
+                // add the buildingInsideRightWall to the buildingGroup
+                buildingGroup.add(buildingInsideRightWall);
+
+                buildingInsideRightWall.position.x = 11.5;
+                buildingInsideRightWall.position.y = 4;
+                buildingInsideRightWall.position.z = -7.5;
+
+                // add the left hand side of the ground and 1st floors of the building exterior
+                var buildingLeft = new THREE.CubeGeometry(1, 18.5, 25);
+                var buildingLeft = new THREE.Mesh(buildingRightGeometry, largeStoneMaterial);
+                buildingLeft.castShadow = true;
+
+                // add the buildingLeft to the scene
+                scene.add(buildingLeft);
+
+                // add the buildingLeft to the buildingGroup
+                buildingGroup.add(buildingLeft);
+
+                buildingLeft.position.x = -12;
+                buildingLeft.position.y = 4;
+                buildingLeft.position.z = -7.5;
+
+                // add the inside wall of the left hand side of the ground and 1st floors of the building
+                var buildingLeftWallGeometry = new THREE.CubeGeometry(0.1, 18.5, 24);
+                var buildingInsideLeftWall = new THREE.Mesh(buildingLeftWallGeometry, insideWallMaterial);
+                buildingInsideLeftWall.castShadow = true;
+
+                // add the buildingLeftWall to the scene
+                scene.add(buildingInsideLeftWall);
+
+                // add the buildingLeftWall to the buildingGroup
+                buildingGroup.add(buildingInsideLeftWall);
+
+                buildingInsideLeftWall.position.x = -11.5;
+                buildingInsideLeftWall.position.y = 4;
+                buildingInsideLeftWall.position.z = -7.5;
+
+                // add the left hand side of the ground floor front wall exterior
+                var buildingFrontLeftGeometry = new THREE.CubeGeometry(9.9, 10, 0.5);
+                var buildingFrontLeft = new THREE.Mesh(buildingFrontLeftGeometry, smallStoneMaterial);
+                buildingFrontLeft.castShadow = true;
+
+                // first time using largeStoneMaterial - apply repeating so the texture + bump map fits objects
+                buildingFrontLeft.material.map.repeat.set(1.5, 2);
+
+                buildingFrontLeft.material.map.wrapS = THREE.RepeatWrapping;
+                buildingFrontLeft.material.map.wrapT = THREE.RepeatWrapping;
+
+                buildingFrontLeft.material.bumpMap.repeat.set(1.5, 2);
+
+                buildingFrontLeft.material.bumpMap.wrapS = THREE.RepeatWrapping;
+                buildingFrontLeft.material.bumpMap.wrapT = THREE.RepeatWrapping;
+
+                // add the buildingFrontLeft to the scene
+                scene.add(buildingFrontLeft);
+
+                // add the buildingFrontLeft to the buildingGroup
+                buildingGroup.add(buildingFrontLeft);
+
+                buildingFrontLeft.position.x = -7.5;
+                buildingFrontLeft.position.z = 5;
+
+                // add the inside wall of the ground floor left wall
+                var buildingFrontLeftWallGeometry = new THREE.CubeGeometry(10, 10, 0.1);
+                var buildingFrontLeftInsideWall = new THREE.Mesh(buildingFrontLeftWallGeometry, insideWallMaterial);
+                buildingFrontLeftInsideWall.castShadow = true;
+
+                // add the buildingFrontRight to the scene
+                scene.add(buildingFrontLeftInsideWall);
+
+                // add the buildingFrontRight to the buildingGroup
+                buildingGroup.add(buildingFrontLeftInsideWall);
+
+                buildingFrontLeftInsideWall.position.x = -7.4;
+                buildingFrontLeftInsideWall.position.z = 4.6;
+
+                // add right hand side of the front wall of the ground floor
+                var buildingFrontRightGeometry = new THREE.CubeGeometry(9.9, 10, 0.5);
+                var buildingFrontRight = new THREE.Mesh(buildingFrontRightGeometry, smallStoneMaterial);
+                buildingFrontRight.castShadow = true;
+
+                // add the buildingFrontRight to the scene
+                scene.add(buildingFrontRight);
+
+                // add the buildingFrontRight to the buildingGroup
+                buildingGroup.add(buildingFrontRight);
+
+                buildingFrontRight.position.x = 7.5;
+
+                buildingFrontRight.position.z = 5;
+
+                // add wall
+                var buildingFrontRightWallGeometry = new THREE.CubeGeometry(10, 10, 0.1);
+                var buildingFrontRightInsideWall = new THREE.Mesh(buildingFrontRightWallGeometry, insideWallMaterial);
+                buildingFrontRightInsideWall.castShadow = true;
+
+                // add the buildingFrontRightInsideWall to the scene
+                scene.add(buildingFrontRightInsideWall);
+
+                // add the buildingFrontRightWall to the buildingGroup
+                buildingGroup.add(buildingFrontRightInsideWall);
+
+                buildingFrontRightInsideWall.position.x = 7.4;
+                buildingFrontRightInsideWall.position.z = 4.6;
+
+                // add 1st floor front wall above the door exterior
+                var buildingFrontTopGeometry = new THREE.CubeGeometry(24.9, 8.2, 0.5);
+                var buildingFrontTop = new THREE.Mesh(buildingFrontTopGeometry, mediumStoneMaterial);
+
+                // repeat wrapping for texture and bump map for medium stone maps to fit objects
+                buildingFrontTop.material.map.repeat.set(4, 2);
+
+                buildingFrontTop.material.map.wrapS = THREE.RepeatWrapping;
+                buildingFrontTop.material.map.wrapT = THREE.RepeatWrapping;
+
+                buildingFrontTop.material.bumpMap.repeat.set(4, 2);
+
+                buildingFrontTop.material.bumpMap.wrapS = THREE.RepeatWrapping;
+                buildingFrontTop.material.bumpMap.wrapT = THREE.RepeatWrapping;
+
+                buildingFrontTop.castShadow = true;
+
+                // add the buildingFrontTop wall to the scene
+                scene.add(buildingFrontTop);
+
+                // add the buildingFrontTop wall to the buildingGroup
+                buildingGroup.add(buildingFrontTop);
+
+                buildingFrontTop.position.y = 9.1;
+                buildingFrontTop.position.z = 5;
+
+                // add buildingFirstFloorFrontInsideWall
+                var buildingFrontTopWallGeometry = new THREE.CubeGeometry(24.5, 8.2, 0.1);
+                var buildingFirstFloorFrontInsideWall = new THREE.Mesh(buildingFrontTopWallGeometry, insideWallMaterial);
+                buildingFirstFloorFrontInsideWall.castShadow = true;
+
+                // add the buildingFirstFloorFrontInsideWall to the scene
+                scene.add(buildingFirstFloorFrontInsideWall);
+
+                // add the buildingFirstFloorFrontInsideWall to the buildingGroup
+                buildingGroup.add(buildingFirstFloorFrontInsideWall);
+
+                // position buildingFirstFloorFrontInsideWall
+                buildingFirstFloorFrontInsideWall.position.y = 9.1;
+                buildingFirstFloorFrontInsideWall.position.z = 4.6;
+
+                // create carpet floor geometry
+                var buildingFloorGeometry = new THREE.CubeGeometry(24.09, 0.2, 24.5);
+
+                // create carpet material
+                var carpetMaterial = new THREE.MeshLambertMaterial({color: 0xFFFFFF});
+
+                // create ground floor carpet
+                var buildingGroundFloorCarpet = new THREE.Mesh(buildingFloorGeometry, carpetMaterial);
+
+                // add the buildingGroundFloorCarpet to the scene
+                scene.add(buildingGroundFloorCarpet);
+
+                // add the buildingGroundFloorCarpet to the buildingGroup
+                buildingGroup.add(buildingGroundFloorCarpet);
+
+                // position buildingGroundFloorCarpet
+                buildingGroundFloorCarpet.position.y = -5;
+                buildingGroundFloorCarpet.position.z = -7.6;
+
+                // add geometry for first and second floor carpets
+                var buildingFirstSecondFloorCarpetGeometry = new THREE.CubeGeometry(19, 0.2, 24.5);
+
+                // add 1st floor carpet
+                var buildingFirstFloorCarpet = new THREE.Mesh(buildingFirstSecondFloorCarpetGeometry, carpetMaterial);
+                buildingFirstFloorCarpet.castShadow = true;
+                buildingFirstFloorCarpet.receiveShadow = true;
+
+                // add the buildingFirstFloorCarpet to the scene
+                scene.add(buildingFirstFloorCarpet);
+
+                // add the buildingFirstFloorCarpet to the buildingGroup
+                buildingGroup.add(buildingFirstFloorCarpet);
+
+                // position buildingFirstFloorCarpet
+                buildingFirstFloorCarpet.position.x = 2;
+                buildingFirstFloorCarpet.position.y = 5.8;
+                buildingFirstFloorCarpet.position.z = -7.6;
+
+                // create second floor objects
+
+                // create secondFloorGroup
+                var secondFloorGroup = new THREE.Object3D();
+                scene.add(secondFloorGroup);
+
+                // add to 3rd floor group
+                buildingGroup.add(secondFloorGroup);
+
+                // addd buildingFrontSecondFloor wall
+                var buildingFrontSecondFloorGeometry = new THREE.CubeGeometry(24.9, 8.2, 0.5);
+                var buildingFrontSecondFloor = new THREE.Mesh(buildingFrontSecondFloorGeometry, mediumStoneMaterial);
+                buildingFrontSecondFloor.castShadow = true;
+
+                // add the buildingFrontSecondFloor to the scene
+                scene.add(buildingFrontSecondFloor);
+
+                // add the buildingFrontSecondFloor to the buildingGroup
+                buildingGroup.add(buildingFrontSecondFloor);
+                secondFloorGroup.add(buildingFrontSecondFloor);
+
+                // position buildingFrontSecondFloor wall
+                buildingFrontSecondFloor.position.y = 17.2;
+                buildingFrontSecondFloor.position.z = 5;
+
+                // add geomtry for inside front and back second floor walls
+                var buildingSecondFloorInsideWallGeometry = new THREE.CubeGeometry(24.5, 8.2, 0.1);
+
+                // add buildingFrontSecondFloorInsideWall
+                var buildingFrontSecondFloorInsideWall = new THREE.Mesh(buildingSecondFloorInsideWallGeometry, insideWallMaterial);
+                buildingFrontSecondFloorInsideWall.castShadow = true;
+
+                // add the buildingFrontSecondFloorInsideWall to the scene
+                scene.add(buildingFrontSecondFloorInsideWall);
+
+                // add the buildingFrontSecondFloorInsideWall to the buildingGroup
+                buildingGroup.add(buildingFrontSecondFloorInsideWall);
+                secondFloorGroup.add(buildingFrontSecondFloorInsideWall);
+
+                // position buildingFrontSecondFloorInsideWall
+                buildingFrontSecondFloorInsideWall.position.y = 17.2;
+                buildingFrontSecondFloorInsideWall.position.z = 4.6;
+
+                // add buildingBackSecondFloor wall exterior
+                var buildingBackSecondFloor = new THREE.Mesh(buildingFrontSecondFloorGeometry, mediumStoneMaterial);
+                buildingBackSecondFloor.castShadow = true;
+
+                // add the buildingBackSecondFloor to the scene
+                scene.add(buildingBackSecondFloor);
+
+                // add the buildingBackSecondFloor to the buildingGroup
+                buildingGroup.add(buildingBackSecondFloor);
+                secondFloorGroup.add(buildingBackSecondFloor);
+
+                // position buildingBackSecondFloor
+                buildingBackSecondFloor.position.y = 17.2;
+                buildingBackSecondFloor.position.z = -20.2;
+
+                // add buildingBackSecondFloorInsideWall
+                var buildingBackSecondFloorInsideWall = new THREE.Mesh(buildingSecondFloorInsideWallGeometry, insideWallMaterial);
+                buildingBackSecondFloorInsideWall.castShadow = true;
+
+                // add the buildingSecondFloorFrontInsideWall to the scene
+                scene.add(buildingBackSecondFloorInsideWall);
+
+                // add to the building group
+                buildingGroup.add(buildingBackSecondFloorInsideWall);
+
+                // add to the secondFloorGroup
+                secondFloorGroup.add(buildingBackSecondFloorInsideWall);
+
+                // position buildingBackSecondFloorInsideWall
+                buildingBackSecondFloorInsideWall.position.y = 17.2;
+                buildingBackSecondFloorInsideWall.position.z = -19.5;
+
+                // add 2nd floor right wall exterior
+                var buildingRightSecondFloorGeometry = new THREE.CubeGeometry(1, 8.2, 25);
+                var buildingRightSecondFloor = new THREE.Mesh(buildingRightSecondFloorGeometry, mediumStoneMaterial);
+                buildingRightSecondFloor.castShadow = true;
+
+                // add the buildingRightSecondFloor to the scene
+                scene.add(buildingRightSecondFloor);
+
+                // add the buildingRightSecondFloor to the buildingGroup
+                buildingGroup.add(buildingRightSecondFloor);
+                secondFloorGroup.add(buildingRightSecondFloor);
+
+                // position buildingRightSecondFloor
+                buildingRightSecondFloor.position.x = 12;
+                buildingRightSecondFloor.position.y = 17.2;
+                buildingRightSecondFloor.position.z = -7.5;
+
+                // add buildingRightInsideWallSecondFloor
+                var buildingRightWallSecondFloorGeometry = new THREE.CubeGeometry(0.1, 8.2, 24);
+                var buildingRightInsideWallSecondFloor = new THREE.Mesh(buildingRightWallSecondFloorGeometry, insideWallMaterial);
+                buildingRightInsideWallSecondFloor.castShadow = true;
+
+                // add the buildingRightWallSecondFloor to the scene
+                scene.add(buildingRightInsideWallSecondFloor);
+
+                // add the buildingRightInsideWallSecondFloor to the buildingGroup
+                buildingGroup.add(buildingRightInsideWallSecondFloor);
+                secondFloorGroup.add(buildingRightInsideWallSecondFloor);
+
+                // position buildingRightInsideWallSecondFloor
+                buildingRightInsideWallSecondFloor.position.x = 11.5;
+                buildingRightInsideWallSecondFloor.position.y = 17.2;
+                buildingRightInsideWallSecondFloor.position.z = -7.5;
+
+                // add buildingSecondFloorLeft left wall
+                var buildingLeftSecondFloorGeometry = new THREE.CubeGeometry(1, 8.2, 25);
+                var buildingLeftSecondFloor = new THREE.Mesh(buildingLeftSecondFloorGeometry, mediumStoneMaterial);
+                buildingLeft.castShadow = true;
+
+                // add the buildingSecondFloorLeft to the scene
+                scene.add(buildingLeftSecondFloor);
+
+                // add the buildingSecondFloorLeft to the buildingGroup
+                buildingGroup.add(buildingLeftSecondFloor);
+                secondFloorGroup.add(buildingLeftSecondFloor);
+
+                // position buildingSecondFloorLeft wall
+                buildingLeftSecondFloor.position.x = -12;
+                buildingLeftSecondFloor.position.y = 17.2;
+                buildingLeftSecondFloor.position.z = -7.5;
+
+                // add buildingSecondFloorLeftInsideWall
+                var buildingLeftSecondFloorInsideWallGeometry = new THREE.CubeGeometry(0.1, 8.2, 24);
+                var buildingLeftSecondFloorInsideWall = new THREE.Mesh(buildingLeftSecondFloorInsideWallGeometry, insideWallMaterial);
+                buildingLeftSecondFloorInsideWall.castShadow = true;
+
+                // add the buildingSecondFloorLeftWall to the scene
+                scene.add(buildingLeftSecondFloorInsideWall);
+
+                // add the buildingSecondFloorLeftInsideWall to the buildingGroup
+                buildingGroup.add(buildingLeftSecondFloorInsideWall);
+                secondFloorGroup.add(buildingLeftSecondFloorInsideWall);
+
+                // position buildingSecondFloorLeftInside wall
+                buildingLeftSecondFloorInsideWall.position.x = -11.5;
+                buildingLeftSecondFloorInsideWall.position.y = 17.2;
+                buildingLeftSecondFloorInsideWall.position.z = -7.5;
+
+                // add buildingSecondFloor floor carpet
+                var buildingSecondFloorCarpet = new THREE.Mesh(buildingFirstSecondFloorCarpetGeometry, carpetMaterial);
+
+                // add the buildingSecondFloor to the scene
+                scene.add(buildingSecondFloorCarpet);
+
+                // add the buildingSecondFloor to the buildingGroup
+                buildingGroup.add(buildingSecondFloorCarpet);
+                secondFloorGroup.add(buildingSecondFloorCarpet);
+
+                // position buildingSecondFloor
+                buildingSecondFloorCarpet.position.x = -2;
+                buildingSecondFloorCarpet.position.y = 14.8;
+                buildingSecondFloorCarpet.position.z = -7.6;
+
+                // create step geometry
+                var stepGeometry = new THREE.CubeGeometry(4, 1.1, 1);
+
+                // create ground floor step variables
+                var stepsGroundFloor = [];
+                var stepX = -9.5;
+                var stepY = -4.5;
+                var stepZ = -10;
+
+                // create the ground floor steps via loop
+                for (var i = 0; i < 10; ++i) {
+                    stepsGroundFloor[i] = new THREE.Mesh(stepGeometry, carpetMaterial);
+                    stepsGroundFloor[i].castShadow = true;
+                    stepsGroundFloor[i].position.x = stepX;
+                    stepsGroundFloor[i].position.y = stepY;
+                    stepsGroundFloor[i].position.z = stepZ;
+
+                    if (i < 10) {
+                        // increment step position for each i iteration
+                        stepY += 1.1;
+                        stepZ -= 1;
+                    }
+
+                    buildingGroup.add(stepsGroundFloor[i]);
+                }
+
+                // change + add step variables for first floor
+                var stepsFirstFloor = [];
+                stepX = 9.5;
+                stepY = 6.5;
+                stepZ = -12;
+
+                // create the steps from 1st to 2nd floor via loop
+                for (var i = 0; i < 8; ++i) {
+                    stepsFirstFloor[i] = new THREE.Mesh(stepGeometry, carpetMaterial);
+                    stepsFirstFloor[i].castShadow = true;
+                    stepsFirstFloor[i].position.x = stepX;
+                    stepsFirstFloor[i].position.y = stepY;
+                    stepsFirstFloor[i].position.z = stepZ;
+
+                    if (i < 10) {
+                        // increment step position for each i iteration
+                        stepY += 1.1;
+                        stepZ -= 1;
+                    }
+
+                    buildingGroup.add(stepsFirstFloor[i]);
+                    secondFloorGroup.add(stepsFirstFloor[i]);
+                }
+
+                // add window geometry
+                var windowGeometry = new THREE.CubeGeometry(3, 4, 1.5);
+
+                // add window material
+                var windowMaterial = new THREE.MeshLambertMaterial({color: 0xFFFFFF});
+
+                // create the windows
+                var windows = [];
+                for (var i = 0; i <= 8; ++i) {
+                    windows[i] = new THREE.Mesh(windowGeometry, windowMaterial);
+                    windows[i].castShadow = true;
+                    if (i % 2 === 0) { // i = 0 or 2
+                        windows[i].position.x = 7;
+                    } else { // i = 1 or 3
+                        windows[i].position.x = -7;
+                    }
+                    windows[i].position.y = 2.5;
+                    if (i < 2) { // i = 0 or 1
+                        windows[i].position.z = 4.8;
+                    } else { // i = 2 or 3
+                        windows[i].position.z = -20.1;
+                    }
+                    if (i > 4) {
+                        windows[i].position.y = 10;
+                    }
+                    if (i > 6) {
+                        windows[i].position.z = 4.8;
+                    }
+                    buildingGroup.add(windows[i]);
+                }
+
+                // create stair banister
+                var stairBanisterGeometry = new THREE.CubeGeometry(0.5, 11, 10);
+                var stairBanister = new THREE.Mesh(stairBanisterGeometry, insideWallMaterial);
+                stairBanister.castShadow = true;
+
+                // position the stairBanister with respect to group
+                stairBanister.position.x = -7.3;
+                stairBanister.position.y = 0.2;
+                stairBanister.position.z = -14.5;
+
+                // add the stairBanister to the scene
+                scene.add(stairBanister);
+
+                // add the stairBanister to the buildingGroup
+                buildingGroup.add(stairBanister);
+
+                // create building roof
+                var roofGeometry = new THREE.CylinderGeometry(0, 17.9, 7.5, 4, 1);
+                var buildingRoof = new THREE.Mesh(roofGeometry, roofMaterial);
+                buildingRoof.castShadow = true;
+
+                // repeat wrapping for texture and bump map for medium stone maps to fit objects
+                buildingRoof.material.map.repeat.set(4, 2);
+
+                buildingRoof.material.map.wrapS = THREE.RepeatWrapping;
+                buildingRoof.material.map.wrapT = THREE.RepeatWrapping;
+
+                // position building roof
+                buildingRoof.position.y = 30;
+                buildingRoof.position.z = -7.5;
+
+                buildingRoof.rotation.y = 150;
+
+                // add buildingRoof to the scene
+                scene.add(buildingRoof);
+
+                // add buildingRoof to buuldingGroup
+                buildingGroup.add(buildingRoof);
+
+                // create secondFloorRoof
+                var secondFloorRoof = new THREE.Mesh(roofGeometry, roofMaterial);
+                secondFloorRoof.castShadow = true;
+
+                // position building roof
+                secondFloorRoof.position.y = 25;
+                secondFloorRoof.position.z = -7.5;
+
+                secondFloorRoof.rotation.y = 150;
+
+                // add buildingRoof to the scene
+                scene.add(secondFloorRoof);
+
+                // add buildingRoof to buuldingGroup
+                buildingGroup.add(secondFloorRoof);
+                secondFloorGroup.add(secondFloorRoof);
+
+                // create door group
+                var doorGroup = new THREE.Object3D();
+                doorGroup.position.x = 0;
+                doorGroup.rotation.y = 0;
+                doorGroup.position.z = 5;
+
+                // add doorGroup to buildingGroup
+                buildingGroup.add(doorGroup);
+
+                // create building door
+                var buildingDoorGeometry = new THREE.CubeGeometry(5, 10, 0.5);
+                var buildingDoorMaterial = new THREE.MeshLambertMaterial({color: 0x9C866B});
+                var buildingDoor = new THREE.Mesh(buildingDoorGeometry, buildingDoorMaterial);
+                buildingDoor.castShadow = true;
+
+                buildingDoor.lookAt(doorGroup);
+
+                // add the buildingGarage to the scene
+                scene.add(buildingDoor);
+
+                // add building door to doorGroup
+                doorGroup.add(buildingDoor);
+
+                // create door handle
+                var doorHandleGeometry = new THREE.SphereGeometry(0.5);
+                var doorHandleMaterial = new THREE.MeshBasicMaterial({color: 0xF0C100});
+                var doorHandle = new THREE.Mesh(doorHandleGeometry, doorHandleMaterial);
+
+                // add door handle to scene
+                scene.add(doorHandle);
+
+                // add door handle to doorGroup
+                doorGroup.add(doorHandle);
+                doorHandle.position.x = 2;
+
+                // create lift
+                var liftGeometry = new THREE.CubeGeometry(4, 1.5, 4);
+                var liftFirstFloor = new THREE.Mesh(liftGeometry, buildingDoorMaterial);
+                liftFirstFloor.castShadow = true;
+
+                // position lift
+                liftFirstFloor.position.x = -9.5;
+                liftFirstFloor.position.y = -5;
+                liftFirstFloor.position.z = 2;
+
+                // add the lift to the scene
+                scene.add(liftFirstFloor);
+
+                // add lift to buildingGroup
+                buildingGroup.add(liftFirstFloor);
+
+                // create 2nd floor lift
+                var liftSecondFloor = new THREE.Mesh(liftGeometry, buildingDoorMaterial);
+                liftSecondFloor.castShadow = true;
+
+                // position lift
+                liftSecondFloor.position.x = 9.5;
+                liftSecondFloor.position.y = 6;
+                liftSecondFloor.position.z = 2;
+
+                // add the lift to the scene
+                scene.add(liftSecondFloor);
+
+                // add lift to buildingGroup and secondFloorGroup
+                buildingGroup.add(liftSecondFloor);
+                secondFloorGroup.add(liftSecondFloor);
+
+                // add table and chair
+                var tableChairGroup = new THREE.Object3D();
+
+                // add table and chair to buildingGroup
+                buildingGroup.add(tableChairGroup);
+
+                scene.add(tableChairGroup);
+
+                var tableMaterial = new THREE.MeshLambertMaterial({color: 0x802020});
+                var tableGeometry = new THREE.CubeGeometry(1, 1, 1);
+
+                // create a table top
+                var tableTop = new THREE.Mesh(tableGeometry, tableMaterial);
+                tableTop.castShadow = true;
+                tableTop.scale.set(10, 0.5, 10);
+                tableTop.position.y = 5;
+                scene.add(tableTop);
+                tableChairGroup.add(tableTop);
+
+                // create the legs
+                var tableLegs = [];
+                for (var i = 0; i < 4; ++i) {
+                    tableLegs[i] = new THREE.Mesh(tableGeometry, tableMaterial);
+                    tableLegs[i].castShadow = true;
+                    tableLegs[i].scale.set(0.5, 5, 0.5);
+                    if (i % 2 === 0) { // i = 0 or 2
+                        tableLegs[i].position.x = 4.5;
+                    } else { // i = 1 or 3
+                        tableLegs[i].position.x = -4.5;
+                    }
+                    tableLegs[i].position.y = 2.5;
+                    if (i < 2) { // i = 0 or 1
+                        tableLegs[i].position.z = 4.5;
+                    } else { // i = 2 or 3
+                        tableLegs[i].position.z = -4.5;
+                    }
+                    scene.add(tableLegs[i]);
+                    tableChairGroup.add(tableLegs[i]);
+                }
+
+                // create chair
+                var chairSeat = new THREE.Mesh(tableGeometry, tableMaterial);
+                chairSeat.castShadow = true;
+                chairSeat.scale.set(4, 0.5, 4);
+                chairSeat.position.y = 4;
+                chairSeat.position.z = 10;
+                scene.add(chairSeat);
+                tableChairGroup.add(chairSeat);
+
+                var chairBack = new THREE.Mesh(tableGeometry, tableMaterial);
+                chairBack.castShadow = true;
+                chairBack.scale.set(4, 1, 0.5);
+                chairBack.position.y = 7;
+                chairBack.position.z = 1.75 + chairSeat.position.z;
+                scene.add(chairBack);
+                tableChairGroup.add(chairBack);
+
+                // create the legs
+                var chairLegs = [];
+                for (var i = 0; i < 4; ++i) {
+                    chairLegs[i] = new THREE.Mesh(tableGeometry, tableMaterial);
+                    chairLegs[i].castShadow = true;
+                    if (i % 2 === 0) { // i = 0 or 2
+                        chairLegs[i].position.x = 1.8;
+                    } else { // i = 1 or 3
+                        chairLegs[i].position.x = -1.8;
+                    }
+                    if (i < 2) { // i = 0 or 1
+                        chairLegs[i].scale.set(0.5, 8, 0.5);
+                        chairLegs[i].position.y = 4;
+                        chairLegs[i].position.z = 1.8 + chairSeat.position.z;
+                    } else { // i = 2 or 3
+                        chairLegs[i].scale.set(0.5, 4, 0.5);
+                        chairLegs[i].position.y = 2;
+                        chairLegs[i].position.z = -1.8 + chairSeat.position.z;
+                    }
+                    scene.add(chairLegs[i]);
+                    tableChairGroup.add(chairLegs[i]);
+                }
+
+                // rescale the table and chair to fit the house scene
+                tableChairGroup.scale.set(0.5, 0.5, 0.5);
+
+                // reposition to set table and chair to default in ground floor of the scene
+                tableChairGroup.position.x = -4;
+                tableChairGroup.position.y = 0;
+                tableChairGroup.position.z = -12;
+
+                // add a sofa group
+                var sofaGroup = new THREE.Object3D();
+
+                buildingGroup.add(sofaGroup);
+
+                scene.add(sofaGroup);
+
+                // create sofa base geometry
+                var sofaBaseGeometry = new THREE.CubeGeometry(6, 1.5, 2);
+                var sofaMaterial = new THREE.MeshLambertMaterial({color: 0xADADAD});
+
+                // create sofa base
+                var sofaBase = new THREE.Mesh(sofaBaseGeometry, sofaMaterial);
+                sofaBase.castShadow = true;
+
+                scene.add(sofaBase);
+                sofaGroup.add(sofaBase);
+
+                // create sofa arm rest geometry
+                var sofaArmRestGeometry = new THREE.SphereGeometry(0.8);
+
+                // create sofa arm rests
+                var sofaArmRestLeft = new THREE.Mesh(sofaArmRestGeometry, sofaMaterial);
+                sofaArmRestLeft.castShadow = true;
+                var sofaArmRestRight = new THREE.Mesh(sofaArmRestGeometry, sofaMaterial);
+                sofaArmRestRight.castShadow = true;
+
+                scene.add(sofaArmRestLeft);
+                scene.add(sofaArmRestRight);
+
+                sofaGroup.add(sofaArmRestLeft);
+                sofaGroup.add(sofaArmRestRight);
+
+                sofaArmRestLeft.position.x = 3;
+                sofaArmRestLeft.position.y = 1.2;
+                sofaArmRestLeft.position.z = -0.6;
+
+                sofaArmRestRight.position.x = -3;
+                sofaArmRestRight.position.y = 1.2;
+                sofaArmRestRight.position.z = -0.6;
+
+                // create sofa back geometry
+                var sofaBackGeometry = new THREE.CubeGeometry(6, 1.5, 0.8);
+
+                // create sofa back
+                var sofaBack = new THREE.Mesh(sofaBackGeometry, sofaMaterial);
+                sofaArmRestRight.castShadow = true;
+
+                scene.add(sofaBack);
+                sofaGroup.add(sofaBack);
+
+                sofaBack.position.y = 1.5;
+                sofaBack.position.z = 0.6;
+
+                // position sofa group
+
+                // ground floor sofa position
+                sofaGroup.position.x = 10.5;
+                sofaGroup.position.y = 1;
+                sofaGroup.position.z = 5.8;
+
+                sofaGroup.rotation.y = 0.5 * Math.PI;
+
+                // create bed
+                // add a bed group
+                var bedGroup = new THREE.Object3D();
+
+                buildingGroup.add(bedGroup);
+
+                scene.add(bedGroup);
+
+                // create bed base geometry
+                var bedBaseGeometry = new THREE.CubeGeometry(4.5, 2, 6.5);
+
+                // create bed materials
+                var bedFrameMaterial = new THREE.MeshLambertMaterial({color: 0xffdda0});
+                var bedBeddingMaterial = new THREE.MeshLambertMaterial({color: 0xffffff});
+
+                // create bed base
+                var bedBase = new THREE.Mesh(bedBaseGeometry, bedFrameMaterial);
+                sofaBase.castShadow = true;
+
+                scene.add(bedBase);
+                bedGroup.add(bedBase);
+
+                // create pillow geometry
+                var bedPillowGeometry = new THREE.CubeGeometry(2, 1, 1);
+
+                // create pillows
+                var bedPillowLeft = new THREE.Mesh(bedPillowGeometry, bedBeddingMaterial);
+                bedPillowLeft.castShadow = true;
+                var bedPillowRight = new THREE.Mesh(bedPillowGeometry, bedBeddingMaterial);
+                bedPillowRight.castShadow = true;
+
+                scene.add(bedPillowLeft);
+                scene.add(bedPillowRight);
+
+                bedGroup.add(bedPillowLeft);
+                bedGroup.add(bedPillowRight);
+
+                bedPillowLeft.position.x = 1.1;
+                bedPillowLeft.position.y = 1.1;
+                bedPillowLeft.position.z = 1.4;
+
+                bedPillowRight.position.x = -1.1;
+                bedPillowRight.position.y = 1.1;
+                bedPillowRight.position.z = 1.4;
+
+                // create bedding geometry
+                var bedDuvetGeometry = new THREE.CubeGeometry(4.3, 0.2, 4.3);
+
+                var bedDuvet = new THREE.Mesh(bedDuvetGeometry, bedBeddingMaterial);
+                bedDuvet.castShadow = true;
+
+                scene.add(bedDuvet);
+
+                bedGroup.add(bedDuvet);
+
+                bedDuvet.position.y = 1.1;
+                bedDuvet.position.z = -1;
+
+                // create bed back geometry
+                var bedBackGeometry = new THREE.CubeGeometry(4.5, 2, 1.3);
+
+                // create bed back
+                var bedBack = new THREE.Mesh(bedBackGeometry, bedFrameMaterial);
+                sofaArmRestRight.castShadow = true;
+
+                scene.add(bedBack);
+                bedGroup.add(bedBack);
+
+                bedBack.position.y = 1.5;
+                bedBack.position.z = 2.6;
+
+                // first floor bed position
+                bedGroup.position.x = 2;
+                bedGroup.position.y = 11.8;
+                bedGroup.position.z = -11.5;
+
+                bedGroup.rotation.y = Math.PI;
+
+                // add subtle ambient lighting
+                var ambientLight = new THREE.AmbientLight(0x606060);
+                scene.add(ambientLight);
+
+                // add an overhead spotlight that will rotate around the scene
+                var lightColor = "0xffffff";
+                var light = new THREE.SpotLight(lightColor);
+                light.position.set(10, 30, 20);
+                light.castShadow = true;
+                light.target = plane;
+                scene.add(light);
+
+                // add a small sphere simulating the light
+                var sphereLight = new THREE.SphereGeometry(3);
+                var sphereLightMaterial = new THREE.MeshBasicMaterial({color: 0xac6c25});
+                var sphereLightMesh = new THREE.Mesh(sphereLight, sphereLightMaterial);
+                sphereLightMesh.position.copy(light.position);
+                scene.add(sphereLightMesh);
+
+                // add the output of the renderer to the html element
+                $("#WebGL-output").append(renderer.domElement);
+
+                // set secondFloorGroup to not be visible on load
+                secondFloorGroup.visible = false;
+
+                // variables to control if objects are placed on third floor (true if they are false if on another floor)
+                var tableChairPosition;
+                var sofaPosition;
+                var bedPosition;
+
+                var controls = new function () {
+                    this.MoveCamera = 'WASD keys to move';
+                    this.CameraUpDown = 'Up/down keys to move camera';
+                    this.FirstPersonCamera = 'Press Enter';
+                    this.OverheadCamera = 'Press Backspace';
+                    this.WindControl = 'Spacebar to turn on/off';
+                    this.windSpeed = 2;
+                    this.daySpeed = 12;
+                    this.wallColour = insideWallMaterial.color.getHex();
+                    this.carpetColour = carpetMaterial.color.getHex();
+                    this.tableChairPosition = "groundFloor";
+                    this.tableChairPosition = function (e) {
+                        switch (e) {
+                            case "groundFloor":
+                                // set ground floor position for object and set second floor variable to false
+                                tableChairPosition = false;
+                                tableChairGroup.visible = true;
+                                tableChairGroup.position.x = -4;
+                                tableChairGroup.position.y = 0;
+                                tableChairGroup.position.z = -12;
+                                // reset group rotation to original position
+                                tableChairGroup.rotation.y = 0;
+                                break;
+
+                            case "firstFloor":
+                                // set first floor position for object and set second floor variable to false
+                                tableChairPosition = false;
+                                tableChairGroup.visible = true;
+                                tableChairGroup.position.x = 0;
+                                tableChairGroup.position.y = 11;
+                                tableChairGroup.position.z = 6;
+                                // rotate tableChairGroup 180 degrees to face a different direction
+                                tableChairGroup.rotation.y = Math.PI;
+                                break;
+
+
+                            case "secondFloor":
+                                // set second floor position for object and set second floor variable to true
+                                tableChairPosition = true;
+                                // if second floor set to visible, display object
+                                if (secondFloorGroup.visible === false) {
+                                    tableChairGroup.visible = false;
+                                }
+                                // tableChairGroup 2nd floor position
+                                tableChairGroup.position.x = -9;
+                                tableChairGroup.position.y = 20;
+                                tableChairGroup.position.z = -10;
+                                // rotate tableChairGroup 90 degrees to face a different direction
+                                tableChairGroup.rotation.y = 0.5 * Math.PI;
+                                break;
+                        }
+                    };
+                    this.sofaPosition = "groundFloor";
+                    this.sofaPosition = function (e) {
+                        switch (e) {
+                            case "groundFloor":
+                                // set ground floor position for object and set second floor variable to false
+                                sofaPosition = false;
+                                sofaGroup.visible = true;
+                                sofaGroup.position.x = 10.5;
+                                sofaGroup.position.y = 1;
+                                sofaGroup.position.z = 5.8;
+                                // rotate sofaGroup 90 degrees
+                                sofaGroup.rotation.y = 0.5 * Math.PI;
+                                break;
+
+                            case "firstFloor":
+                                // set first floor position for object and set second floor variable to false
+                                sofaPosition = false;
+                                sofaGroup.visible = true;
+                                sofaGroup.position.x = 10.5;
+                                sofaGroup.position.y = 11.5;
+                                sofaGroup.position.z = 0;
+                                // rotate sofaGroup 90 degrees
+                                sofaGroup.rotation.y = 0.5 * Math.PI;
+                                break;
+
+
+                            case "secondFloor":
+                                // set second floor position for object and set second floor variable to true
+                                sofaPosition = true;
+                                // if second floor set to visible, display object
+                                if (secondFloorGroup.visible === false) {
+                                    sofaGroup.visible = false;
+                                }
+                                sofaGroup.position.x = -10.5;
+                                sofaGroup.position.y = 20.5;
+                                sofaGroup.position.z = 0;
+                                // rotate sofaGroup 90 degrees
+                                sofaGroup.rotation.y = -0.5 * Math.PI;
+                                break;
+                        }
+                    };
+                    this.bedPosition = "firstFloor";
+                    this.bedPosition = function (e) {
+                        switch (e) {
+                            case "groundFloor":
+                                // set ground floor position for object and set second floor variable to false
+                                bedPosition = false;
+                                bedGroup.visible = true;
+                                bedGroup.position.x = 8;
+                                bedGroup.position.y = 1;
+                                bedGroup.position.z = -11.5;
+                                // rotate 180 degrees
+                                bedGroup.rotation.y = Math.PI;
+                                break;
+
+                            case "firstFloor":
+                                // set first floor position for object and set second floor variable to false
+                                bedPosition = false;
+                                bedGroup.visible = true;
+                                bedGroup.position.x = 2;
+                                bedGroup.position.y = 11.8;
+                                bedGroup.position.z = -11.5;
+                                // rotate 180 degrees
+                                bedGroup.rotation.y = Math.PI;
+                                break;
+
+
+                            case "secondFloor":
+                                // set second floor position for object and set second floor variable to true
+                                bedPosition = true;
+                                // if second floor set to visible, display object
+                                if (secondFloorGroup.visible === false) {
+                                    bedGroup.visible = false;
+                                }
+                                bedGroup.position.x = -2;
+                                bedGroup.position.y = 21;
+                                bedGroup.position.z = 6.5;
+                                // reset rotation
+                                bedGroup.rotation.y = 2 * Math.PI;
+                                break;
+                        }
+                    };
+                    this.wireframe = carpetMaterial.wireframe;
+                    this.secondFloor = false;
+                    this.roofVisible = true;
+                    this.doorOpen = false;
+                    this.liftsOn = true;
+
+                };
+
+                var gui = new dat.GUI();
+                var liftsOn = true;
+                var keys = gui.addFolder('Scene Controls');
+                keys.add(controls, 'MoveCamera');
+                keys.add(controls, 'FirstPersonCamera');
+                keys.add(controls, 'OverheadCamera');
+                keys.add(controls, 'CameraUpDown');
+                keys.add(controls, 'WindControl');
+                gui.add(controls, 'windSpeed', 1, 5);
+                gui.add(controls, 'daySpeed', 1, 24);
+                gui.add(controls, "tableChairPosition", ['groundFloor', 'firstFloor', 'secondFloor']).onChange(controls.tableChairPosition);
+                gui.add(controls, "sofaPosition", ['groundFloor', 'firstFloor', 'secondFloor']).onChange(controls.sofaPosition);
+                gui.add(controls, "bedPosition", ['groundFloor', 'firstFloor', 'secondFloor']).onChange(controls.bedPosition);
+
+                // allow player to change inside wall paint colour by hex (controls function)
+                gui.addColor(controls, 'wallColour').onChange(function (e) {
+                    insideWallMaterial.color = new THREE.Color(e);
+                });
+
+                // allow player to change carpet colour by hex (controls function)
+                gui.addColor(controls, 'carpetColour').onChange(function (e) {
+                    carpetMaterial.color = new THREE.Color(e);
+                });
+
+                // enable wireframe control - sets all materials to display wireframe mode when turned on
+                gui.add(controls, 'wireframe').onChange(function (e) {
+                    carpetMaterial.wireframe = e;
+                    turbineMaterial.wireframe = e;
+                    buildingDoorMaterial.wireframe = e;
+                    planeMaterial.wireframe = e;
+                    windowMaterial.wireframe = e;
+                    insideWallMaterial.wireframe = e;
+                    buildingBack.material.wireframe = e;
+                    buildingRight.material.wireframe = e;
+                    buildingLeft.material.wireframe = e;
+                    buildingFrontLeft.material.wireframe = e;
+                    buildingFrontRight.material.wireframe = e;
+                    buildingFrontTop.material.wireframe = e;
+                    tableMaterial.wireframe = e;
+                    doorHandleMaterial.wireframe = e;
+                    sofaMaterial.wireframe = e;
+                    roofMaterial.wireframe = e;
+                    bedFrameMaterial.wireframe = e;
+                    bedBeddingMaterial.wireframe = e;
+                    sphereLightMaterial.wireframe = e;
+                });
+
+                buildingRoof.position.y = 17;
+
+                gui.add(controls, 'secondFloor').onChange(function (e) {
+
+                    secondFloorGroup.visible = e;
+
+                    // if second floor set to visible and object set to second floor, display object in 2nd floor position
+                    if (secondFloorGroup.visible === true && tableChairPosition === true) {
+                        tableChairGroup.visible = true;
+                        // tableChairGroup 2nd floor position
+                        tableChairGroup.position.x = -9;
+                        tableChairGroup.position.y = 20;
+                        tableChairGroup.position.z = -10;
+                        // rotate tableChairGroup 90 degrees to face a different direction
+                        tableChairGroup.rotation.y = 0.5 * Math.PI;
+                    } else if (secondFloorGroup.visible === false && tableChairPosition === true) {
+                        // if second floor is not visible but object position is set to second floor, do not display object
+                        tableChairGroup.visible = false;
+                    }
+
+                    // if second floor set to visible and object set to second floor, display object in 2nd floor position
+                    if (secondFloorGroup.visible === true && sofaPosition === true) {
+                        sofaGroup.visible = true;
+                        // second floor sofa position
+                        sofaGroup.position.x = -10.5;
+                        sofaGroup.position.y = 20.5;
+                        sofaGroup.position.z = 0;
+
+                        sofaGroup.rotation.y = -0.5 * Math.PI;
+                    } else if (secondFloorGroup.visible === false && sofaPosition === true) {
+                        // if second floor is not visible but object position is set to second floor, do not display object
+                        sofaGroup.visible = false;
+                    }
+
+                    // if second floor set to visible and object set to second floor, display object in 2nd floor position
+                    if (secondFloorGroup.visible === true && bedPosition === true) {
+                        bedGroup.visible = true;
+                        // second floor bed position
+                        bedGroup.position.x = -2;
+                        bedGroup.position.y = 21;
+                        bedGroup.position.z = 6.5;
+                        bedGroup.rotation.y = 2 * Math.PI;
+                    } else if (secondFloorGroup.visible === false && bedPosition === true) {
+                        // if second floor is not visible but object position is set to second floor, do not display object
+                        bedGroup.visible = false;
+                    }
+
+                    // if roof is set to visible and second floor is not turned on, display first floor roof
+                    if (controls.roofVisible === true && controls.secondFloor === false) {
+                        secondFloorRoof.visible = false;
+                        buildingRoof.visible = true;
+                    } else if (controls.roofVisible === true && controls.secondFloor === true) {
+                        // if roof is visible and second floor is on, display second floor roof
+                        secondFloorRoof.visible = true;
+                        buildingRoof.visible = false;
+                    } else if (controls.roofVisible === false) {
+                        // if roof is set to not visible do not display either roof
+                        secondFloorRoof.visible = false;
+                        buildingRoof.visible = false;
+                    }
+                });
+
+                // toggle to display or hide the building roof
+                gui.add(controls, 'roofVisible').onChange(function (e) {
+                    if (controls.secondFloor === true) {
+                        secondFloorRoof.visible = e;
+                        buildingRoof.visible = false;
+                    } else if (controls.secondFloor === false) {
+                        buildingRoof.visible = e;
+                    }
+                });
+
+                // toggle to turn off and on the lifts within the building
+                gui.add(controls, 'liftsOn').onChange(function (e) {
+                    liftsOn = e;
+                });
+
+                // opens and closes the door
+                gui.add(controls, 'doorOpen').onChange(function (e) {
+                    doorOpen = e;
+                });
+
+                keys.open();
+
+                var keysDown = {}; //empty object to store which keys are being held down
+
+                window.addEventListener("keydown", function (event) {
+                    keysDown[event.keyCode] = true; //create a property  for the key being pressed
+                    //https://css-tricks.com/snippets/javascript/javascript-keycodes/
+                    //console.log(JSON.stringify(keysDown));
+                });
+
+                window.addEventListener("keyup", function (event) {
+                    delete  keysDown[event.keyCode];
+                });
+
+                // declare variables for first person and overhead camera controls
+                var firstPersonControls = true;
+                var overheadControls = false;
+
+                function checkKeys() {
+
+                    if (keysDown[87]) { //w
+                        camera.position.x -= 0.5 * Math.sin(camera.rotation.y);
+                        camera.position.z -= 0.5 * Math.cos(camera.rotation.y);
+                    }
+
+                    if (keysDown[83]) { //s
+                        camera.position.x += 0.5 * Math.sin(camera.rotation.y);
+                        camera.position.z += 0.5 * Math.cos(camera.rotation.y);
+                    }
+
+                    // change camera controls dependent on viewing through overhead or first person camera
+                    if (keysDown[65]) { //a
+                        if (firstPersonControls === true) {
+                            camera.rotation.y += 0.02;
+                        } else if (overheadControls === true) {
+                            orbitGroup.rotation.y -= 0.02;
+                        }
+                    }
+
+                    // change camera controls dependent on viewing through overhead or first person camera
+                    if (keysDown[68]) { //d
+                        if (firstPersonControls === true) {
+                            camera.rotation.y -= 0.02;
+                        } else if (overheadControls === true) {
+                            orbitGroup.rotation.y += 0.02;
+                        }
+                    }
+
+                    if (keysDown[38]) { //up
+                        camera.position.y += 0.5;
+                        if (camera.position.y > 30) {
+                            camera.position.y = 30;
+                        }
+                    }
+                    if (keysDown[40]) { //down
+                        camera.position.y -= 0.5;
+                        if (camera.position.y < -2) {
+                            camera.position.y = -2;
+                        }
+                    }
+                }
+
+                // declare windOn variable
+                var windOn = true;
+
+                // declare doorOpen variable
+                var doorOpen = false;
+
+                var keypress = new window.keypress.Listener();
+
+                keypress.simple_combo("space", function () {
+                    if (windOn === true) {
+                        windOn = false;
+                    } else {
+                        windOn = true;
+                    }
+                });
+
+                // change to first person camera when enter pressed and set to first person camera controls
+                keypress.simple_combo("enter", function () {
+                    firstPersonControls = true;
+                    overheadControls = false;
+                    camera.position.x = 0;
+                    camera.position.y = -2;
+                    camera.position.z = 30;
+                    camera.lookAt(scene.position);
+                });
+
+                // change to third person camera when enter pressed and set to third person camera controls
+                keypress.simple_combo("backspace", function () {
+                    overheadControls = true;
+                    firstPersonControls = false;
+                    camera.position.x = 0;
+                    camera.position.y = 30;
+                    camera.position.z = 20;
+                    camera.lookAt(scene.position);
+
+                });
+
+                /*TOD scene cycle*/
+
+                // begin cycle with daytimeTOD
+                daytimeTOD();
+
+                // night settings
+                function nightTOD() {
+                    clearTimeout();
+                    renderer.setClearColor(0x2F2F2F, 1.0);
+                    windowMaterial.color.setHex(0xefff00);
+                    sphereLightMaterial.color.setHex(0xffffff);
+                    setTimeout(sunriseTOD, 1000 * controls.daySpeed);
+                }
+
+                // sunrise settings
+                function sunriseTOD() {
+                    clearTimeout();
+                    renderer.setClearColor(0xFFEBBC, 1.0);
+                    windowMaterial.color.setHex(0xFFEBBC);
+                    sphereLightMaterial.color.setHex(0xac6c25);
+                    setTimeout(daytimeTOD, 1000 * controls.daySpeed);
+                }
+
+                // daytime settings
+                function daytimeTOD() {
+                    clearTimeout();
+                    renderer.setClearColor(0xDCFEFF, 1.0);
+                    windowMaterial.color.setHex(0xFFFFFF);
+                    sphereLightMaterial.color.setHex(0xac6c25);
+                    setTimeout(sunsetTOD, 1000 * controls.daySpeed);
+                }
+
+                // sunset settings
+                function sunsetTOD() {
+                    clearTimeout();
+                    renderer.setClearColor(0xFFEBBC, 1.0);
+                    windowMaterial.color.setHex(0xFFEBBC);
+                    sphereLightMaterial.color.setHex(0xac6c25);
+                    setTimeout(nightTOD, 1000 * controls.daySpeed);
+                }
+
+                // set lift animation speed
+                var changeLiftY = 0.05;
+                var changeSecondLiftY = 0.05;
+
+                // set the original angle for orbital light
+                var lightAngle = 0;
+
+                render();
+
+                function render() {
+
+                    stats.update();
+
+                    // animate lifts if liftsOn is true
+                    if (liftsOn === true) {
+
+                        // lift to first floor animation
+                        if (Math.abs(liftFirstFloor.position.y) <= 5.5) {
+                            liftFirstFloor.position.y += changeLiftY;
+                        } else {
+                            liftFirstFloor.position.y -= changeLiftY;
+                            if (liftFirstFloor.position.y < 5.2 || liftFirstFloor.position.y > 0) {
+                                changeLiftY = -changeLiftY;
+                            }
+                        }
+
+                        // lift to second floor animation
+                        if (liftSecondFloor.position.y <= 15 && liftSecondFloor.position.y > 5.5) {
+                            liftSecondFloor.position.y += changeSecondLiftY;
+                        } else {
+                            liftSecondFloor.position.y -= changeSecondLiftY;
+                            if (liftSecondFloor.position.y < 15 || liftSecondFloor.position.y > 5.5) {
+                                changeSecondLiftY = -changeSecondLiftY;
+                            }
+                        }
+                    }
+
+                    checkKeys();
+
+                    // rotate the rotor blade group around the y-axis if windOn is true
+                    if (windOn === true) {
+                        rotorGroup.rotation.y += 0.05 * controls.windSpeed;
+                    }
+
+                    // change door position if set to true or false
+                    if (doorOpen === true) {
+                        doorGroup.position.x = -4.3;
+                        doorGroup.rotation.y = 0.25 * Math.PI;
+                        doorGroup.position.z = 7;
+                        doorHandle.position.x = -2;
+
+                    } else if (doorOpen === false) {
+                        doorGroup.position.x = 0;
+                        doorGroup.rotation.y = 0;
+                        doorGroup.position.z = 5;
+                        doorHandle.position.x = 2;
+                    }
+
+                    // set the sun orbital speed
+                    var sunOrbitSpeed = 0.002;
+
+                    // move the orbiting light around the scene
+                    lightAngle += sunOrbitSpeed;
+                    light.position.x = 10 + (100 * (Math.sin(lightAngle)));
+                    light.position.y = (70 * (Math.cos(lightAngle)));
+                    sphereLightMesh.position.copy(light.position);
+
+                    requestAnimationFrame(render);
+
+                    renderer.render(scene, camera);
+                }
+
+                function initStats() {
+
+                    var stats = new Stats();
+
+                    stats.setMode(0); // 0: fps, 1: ms
+
+                    // Align top-left
+                    stats.domElement.style.position = 'absolute';
+                    stats.domElement.style.left = '0px';
+                    stats.domElement.style.top = '0px';
+
+                    $("#Stats-output").append(stats.domElement);
+
+                    return stats;
+                }
+            });
+
+        </script>
+    </body>
+</html>
